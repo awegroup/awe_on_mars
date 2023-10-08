@@ -82,10 +82,10 @@ print("K_a    =", "{:5.3f}".format(viking_1["speedofsound"]/ref),"   ", \
                   "{:5.3f}".format(arsia_north["speedofsound"]/ref))
 ref = earth_sls["windspeed_low"]
 print("K_vw   =", "{:5.3f}".format(viking_1["windspeed_low"]/ref),"   ", \
-                  "{:5.3f}".format(arsia_north["windspeed_low"]/ref), "      (@10 m & low vw@Earth)")
+                  "{:5.3f}".format(arsia_north["windspeed_low"]/ref), "    (@10 m & low vw@Earth)")
 ref = earth_sls["windspeed_high"]
 print("K_vw   =", "{:5.3f}".format(viking_1["windspeed_high"]/ref),"   ", \
-                  "{:5.3f}".format(arsia_north["windspeed_high"]/ref), "      (@100 m & high vw@Earth)")
+                  "{:5.3f}".format(arsia_north["windspeed_high"]/ref), "    (@100 m & high vw@Earth)")
 
 #for site in [viking_1, arsia_north]:
 for site in [viking_1]:
@@ -106,7 +106,7 @@ for site in [viking_1]:
     sys.stdout.write("K_vw   = ")
     for k in k_vw:
         sys.stdout.write("{:<10.0f}".format(k))
-    print()
+    print("(preset, i.e. not from above)")
 
     # Scaling factor planform area
     k_s   = 1/(k_rho*k_vw**3)
@@ -135,3 +135,34 @@ for site in [viking_1]:
     for k in k_d:
         sys.stdout.write("{:<10.3f}".format(k))
     print()
+
+    # Scaling factor membrane thickness
+    k_t   = np.sqrt(k_rho*k_vw)
+    sys.stdout.write("K_t    = ")
+    for k in k_t:
+        sys.stdout.write("{:<10.3f}".format(k))
+    print()
+
+    # Scaling factor kite mass
+    k_m   = 1/np.sqrt(k_rho*k_vw**5)
+    sys.stdout.write("K_m    = ")
+    for k in k_m:
+        sys.stdout.write("{:<10.3f}".format(k))
+    print()
+
+    # Scaling factor gravitational force
+    k_fg  = np.sqrt(k_g**2/(k_rho*k_vw**5))
+    sys.stdout.write("K_Fg   = ")
+    for k in k_fg:
+        sys.stdout.write("{:<10.3f}".format(k))
+    print()
+
+    # Scaling factor launching easiness
+    k_nu  = np.sqrt(k_rho*k_vw**3/k_g**2)
+    sys.stdout.write("K_nu   = ")
+    for k in k_nu:
+        sys.stdout.write("{:<10.3f}".format(k))
+    print()
+
+
+
