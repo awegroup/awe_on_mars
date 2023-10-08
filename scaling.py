@@ -1,0 +1,101 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Oct  2 20:50:10 2023
+
+Two locations on Mars are investigated and compared to sea-level standard (SLS)
+conditions on Earth:
+
+1. Viking 1    at  22.27° N, 312.05° E and z = -3,600 m (altitude above aeroid)
+2. Arsia North at -3.062° N, 236.07° E and z =  4,550 m (altitude above aeroid)
+
+Data is extracted from the Mars Climate Database (MCD) v6.1
+https://www-mars.lmd.jussieu.fr/mcd_python/
+
+Since we are interested in local average data we set time coordinates
+Ls=all and Lt=all, and set averaging=diurnal. This will generate 2d-data files
+with identical columns. By extracting e.g. the first column we have the
+variation of the diurnal (daily) average of the solar longitudes.
+Each column of the 2d-data files contains 25 data points, for solar longitudes
+0 to 360. We use data at 10 m above ground.
+The results of the MCD online requests for the two locations are collected in
+a separate data file, where also the averaging over the solar longitudes is
+performed. The resulting averages are used as input below.
+
+Wikipedia: Sea-level standard (SLS) conditions.
+https://en.wikipedia.org/wiki/Standard_sea-level_conditions
+
+https://www.eea.europa.eu/publications/europes-changing-climate-hazards-1/wind/wind-mean-wind-speed
+
+@author: Roland Schmehl
+"""
+import numpy as np
+
+# Sea-level standard (SLS) conditions from https://en.wikipedia.org/wiki/Standard_sea-level_conditions
+earth_sls =	{
+  "name":          "Earth SLS",
+  "density":        1.225,     # kg/m^3 @SLS
+  "viscosity":      1.8e-5,    # Pa*s   @SLS
+  "gravity":        9.8,       # m/s^2  @SLS
+  "speedofsound":   343,       # m/s    @SLS and T = 293.15 K (= 20 °C)
+  "windspeed_low":  3,         # m/s    @10 m annual mean for European land area
+  "windspeed_high": 10,        # m/s    @100 m annual mean for North Sea region
+}
+
+viking_1 =	{
+  "name":          "Viking_1",
+  "density":        0.020,     # kg/m^3 Williams (2020)
+  "viscosity":      1.09e-5,   # Pa*s
+  "gravity":        3.7,       # m/s^2
+  "speedofsound":   233,       # m/s
+  "windspeed_low":  5,         # m/s    @10 m
+  "windspeed_high": 7,         # m/s    @100 m
+}
+
+arsia_north = {
+  "name":          "Arsia_North",
+  "density":        0.010,     # kg/m^3 MCD
+  "viscosity":      1.04e-5,   # Pa*s
+  "gravity":        3.7,       # m/s^2
+  "speedofsound":   228,       # m/s
+  "windspeed_low":  15,        # m/s    @10 m
+  "windspeed_high": 18,        # m/s    @100 m
+}
+
+print("Table 6.2: Scaling relations...")
+print()
+print("         Viking_1  Arsia_North")
+ref = earth_sls["density"]
+print("K_rho = ", "{:6.4f}".format(viking_1["density"]/ref),"  ", \
+                  "{:6.4f}".format(arsia_north["density"]/ref))
+ref = earth_sls["viscosity"]
+print("K_mu  = ", "{:5.3f}".format(viking_1["viscosity"]/ref),"   ", \
+                  "{:5.3f}".format(arsia_north["viscosity"]/ref))
+ref = earth_sls["gravity"]
+print("K_g   = ", "{:5.3f}".format(viking_1["gravity"]/ref),"   ", \
+                  "{:5.3f}".format(arsia_north["gravity"]/ref))
+ref = earth_sls["speedofsound"]
+print("K_a   = ", "{:5.3f}".format(viking_1["speedofsound"]/ref),"   ", \
+                  "{:5.3f}".format(arsia_north["speedofsound"]/ref))
+ref = earth_sls["windspeed_low"]
+print("K_vw  = ", "{:5.3f}".format(viking_1["windspeed_low"]/ref),"   ", \
+                  "{:5.3f}".format(arsia_north["windspeed_low"]/ref), "      (@10 m & low vw@Earth)")
+ref = earth_sls["windspeed_high"]
+print("K_vw  = ", "{:5.3f}".format(viking_1["windspeed_high"]/ref),"   ", \
+                  "{:5.3f}".format(arsia_north["windspeed_high"]/ref), "      (@100 m & high vw@Earth)")
+
+for site in [viking_1, arsia_north]:
+
+    name  = site["name"]
+    k_rho = site["density"]/earth_sls["density"]
+    k_mu  = site["viscosity"]/earth_sls["viscosity"]
+    k_g   = site["gravity"]/earth_sls["gravity"]
+    k_a   = site["speedofsound"]/earth_sls["speedofsound"]
+    k_vw  = np.array([3, 2])
+    # Scaling factor planform area Eq. (6.44)
+    k_s   = 1/(k_rho*k_vw**3)
+
+    print()
+    print("Table 6.3: Problem parameters and scaling factors for...", name)
+    print(k_rho,k_vw)
+    print("K_S   = ", k_s)
