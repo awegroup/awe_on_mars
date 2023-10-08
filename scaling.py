@@ -30,6 +30,7 @@ https://www.eea.europa.eu/publications/europes-changing-climate-hazards-1/wind/w
 @author: Roland Schmehl
 """
 import numpy as np
+import sys
 
 # Sea-level standard (SLS) conditions from https://en.wikipedia.org/wiki/Standard_sea-level_conditions
 earth_sls =	{
@@ -50,6 +51,7 @@ viking_1 =	{
   "speedofsound":   233,       # m/s
   "windspeed_low":  5,         # m/s    @10 m
   "windspeed_high": 7,         # m/s    @100 m
+  "k_vw":           np.array([2, 3]),
 }
 
 arsia_north = {
@@ -60,42 +62,76 @@ arsia_north = {
   "speedofsound":   228,       # m/s
   "windspeed_low":  15,        # m/s    @10 m
   "windspeed_high": 18,        # m/s    @100 m
+  "k_vw":           np.array([2, 3]),
 }
 
 print("Table 6.2: Scaling relations...")
 print()
 print("         Viking_1  Arsia_North")
 ref = earth_sls["density"]
-print("K_rho = ", "{:6.4f}".format(viking_1["density"]/ref),"  ", \
+print("K_rho  =", "{:6.4f}".format(viking_1["density"]/ref),"  ", \
                   "{:6.4f}".format(arsia_north["density"]/ref))
 ref = earth_sls["viscosity"]
-print("K_mu  = ", "{:5.3f}".format(viking_1["viscosity"]/ref),"   ", \
+print("K_mu   =", "{:5.3f}".format(viking_1["viscosity"]/ref),"   ", \
                   "{:5.3f}".format(arsia_north["viscosity"]/ref))
 ref = earth_sls["gravity"]
-print("K_g   = ", "{:5.3f}".format(viking_1["gravity"]/ref),"   ", \
+print("K_g    =", "{:5.3f}".format(viking_1["gravity"]/ref),"   ", \
                   "{:5.3f}".format(arsia_north["gravity"]/ref))
 ref = earth_sls["speedofsound"]
-print("K_a   = ", "{:5.3f}".format(viking_1["speedofsound"]/ref),"   ", \
+print("K_a    =", "{:5.3f}".format(viking_1["speedofsound"]/ref),"   ", \
                   "{:5.3f}".format(arsia_north["speedofsound"]/ref))
 ref = earth_sls["windspeed_low"]
-print("K_vw  = ", "{:5.3f}".format(viking_1["windspeed_low"]/ref),"   ", \
+print("K_vw   =", "{:5.3f}".format(viking_1["windspeed_low"]/ref),"   ", \
                   "{:5.3f}".format(arsia_north["windspeed_low"]/ref), "      (@10 m & low vw@Earth)")
 ref = earth_sls["windspeed_high"]
-print("K_vw  = ", "{:5.3f}".format(viking_1["windspeed_high"]/ref),"   ", \
+print("K_vw   =", "{:5.3f}".format(viking_1["windspeed_high"]/ref),"   ", \
                   "{:5.3f}".format(arsia_north["windspeed_high"]/ref), "      (@100 m & high vw@Earth)")
 
-for site in [viking_1, arsia_north]:
+#for site in [viking_1, arsia_north]:
+for site in [viking_1]:
 
     name  = site["name"]
-    k_rho = site["density"]/earth_sls["density"]
+#    k_rho = site["density"]/earth_sls["density"]
+    k_rho = 0.0167
     k_mu  = site["viscosity"]/earth_sls["viscosity"]
     k_g   = site["gravity"]/earth_sls["gravity"]
     k_a   = site["speedofsound"]/earth_sls["speedofsound"]
-    k_vw  = np.array([3, 2])
-    # Scaling factor planform area Eq. (6.44)
-    k_s   = 1/(k_rho*k_vw**3)
+    k_vw  = site["k_vw"]
 
     print()
-    print("Table 6.3: Problem parameters and scaling factors for...", name)
-    print(k_rho,k_vw)
-    print("K_S   = ", k_s)
+    print("Table 6.3: Problem parameters and scaling factors for:", name)
+    print("K_rho  =", "{:6.4f}".format(k_rho))
+
+    # Scaling factor wind speed (preset)
+    sys.stdout.write("K_vw   = ")
+    for k in k_vw:
+        sys.stdout.write("{:<10.0f}".format(k))
+    print()
+
+    # Scaling factor planform area
+    k_s   = 1/(k_rho*k_vw**3)
+    sys.stdout.write("K_S    = ")
+    for k in k_s:
+        sys.stdout.write("{:<10.1f}".format(k))
+    print()
+
+    # Scaling factor planform span
+    k_b   = 1/np.sqrt(k_rho*k_vw**3)
+    sys.stdout.write("K_b    = ")
+    for k in k_b:
+        sys.stdout.write("{:<10.2f}".format(k))
+    print()
+
+    # Scaling factor tether force
+    k_f   = 1/k_vw
+    sys.stdout.write("K_F    = ")
+    for k in k_f:
+        sys.stdout.write("{:<10.3f}".format(k))
+    print()
+
+    # Scaling factor tether diameter
+    k_d   = 1/np.sqrt(k_vw)
+    sys.stdout.write("K_d    = ")
+    for k in k_d:
+        sys.stdout.write("{:<10.3f}".format(k))
+    print()
