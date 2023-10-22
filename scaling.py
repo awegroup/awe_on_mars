@@ -17,10 +17,10 @@ Ls=all and Lt=all, and set averaging=diurnal. This will generate 2d-data files
 with identical columns. By extracting e.g. the first column we have the
 variation of the diurnal (daily) average of the solar longitudes.
 Each column of the 2d-data files contains 25 data points, for solar longitudes
-0 to 360. We use data at 10 m above ground.
+0 to 360. We use data at 10 m above ground level.
 The results of the MCD online requests for the two locations are collected in
 a separate data file, where also the averaging over the solar longitudes is
-performed. The resulting averages are used as input below.
+performed. The resulting averages are used as input in the Python script below.
 
 Wikipedia: Sea-level standard (SLS) conditions.
 https://en.wikipedia.org/wiki/Standard_sea-level_conditions
