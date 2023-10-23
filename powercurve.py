@@ -51,19 +51,30 @@ E2 = lift_to_drag_ratio_out**2
 cosine_beta_out  = np.cos(np.radians(elevation_angle_out))
 cosine_beta_in   = np.cos(np.radians(elevation_angle_in))
 force_factor_out = kite_lift_coefficient_out * np.sqrt(1+1/E2) * (1+E2)
+power_factor_ideal = force_factor_out * cosine_beta_out**3 * 4/27
 
 wind_speed_range = wind_speed_max - wind_speed_min
 num_wind_speeds  = int(wind_speed_range/wind_speed_delta + 1)
 wind_speed       = np.linspace(wind_speed_min, wind_speed_max, num_wind_speeds)
 mechanical_power = []
+mechanical_power_ideal = []
 
 def objective_function_1(x):
     f_out    = x[0]
     f_in     = x[1]
     a        = 1 - 2*f_in*cosine_beta_in + f_in**2
     gamma_in = kite_lift_coefficient_in * np.sqrt(a/(1 - cosine_beta_in**2))
-    return -(((cosine_beta_out - f_out)**2 - (gamma_in / force_factor_out) * \
-                a) * (f_in*f_out) / (f_in - f_out))
+    return -((cosine_beta_out - f_out)**2 - (gamma_in / force_factor_out) * \
+                a) * (f_in*f_out) / (f_in - f_out)
+
+def objective_function_2(x, mu_F, f_nF):
+    f_in     = x[0]
+    a        = 1 - 2*f_in*cosine_beta_in + f_in**2
+    b        = (mu_F - 1) * cosine_beta_out + f_nF
+    gamma_in = kite_lift_coefficient_in * np.sqrt(a/(1 - cosine_beta_in**2))
+    return -(((cosine_beta_out - f_nF) / mu_F)**2  \
+             - (gamma_in / force_factor_out) * a)  \
+             * f_in*b/(mu_F*f_in-b)
 
 print("num_wind_speeds = ", num_wind_speeds)
 
@@ -74,6 +85,10 @@ rho = atmosphere_density
 S   = kite_planform_area
 CLo = kite_lift_coefficient_out
 
+# Initialize wind speed regimes
+wind_speed_regime      = 1
+wind_speed_force_limit = 0
+wind_speed_power_limit = 0
 
 # Loop over wind speed range
 for v_w in wind_speed:
@@ -88,33 +103,70 @@ for v_w in wind_speed:
     f_max = reeling_speed_max_limit / v_w
     f_min = reeling_speed_min_limit / v_w
 
-    starting_point = (0.001, -0.001)
-    bounds = ((0.001,  f_max),
-              (f_min, -0.001),)
+    # Unconstrained operation
+    if wind_speed_regime == 1:
 
-    optimisation_result = op.minimize(objective_function_1, starting_point,
-                                      bounds=bounds, method='SLSQP')
+        starting_point = (0.001, -0.001)
+        bounds         = ((0.001,  f_max), (f_min, -0.001),)
 
-    # Reeling factors
-    f_out = optimisation_result['x'][0]
-    f_in = optimisation_result['x'][1]
+        optimisation_result = op.minimize(objective_function_1, \
+                                          starting_point,       \
+                                          bounds=bounds,        \
+                                          method='SLSQP')
 
-    Ft_out = q * kite_planform_area * force_factor_out * \
-             (cosine_beta_out - f_out)**2
+        # Reeling factors
+        f_out = optimisation_result['x'][0]
+        f_in = optimisation_result['x'][1]
 
-    print(v_w, f_out, f_in, Ft_out)
+        # Normalized cycle power
+        p_c = -objective_function_1 ([f_out, f_in])
 
-    mechanical_power.append(Pw)
+        Ft_out = q * kite_planform_area * force_factor_out * \
+                     (cosine_beta_out - f_out)**2
 
-mechanical_power_min = np.min(mechanical_power)
-mechanical_power_max = np.max(mechanical_power)
+        if Ft_out > nominal_tether_force:
+            wind_speed_regime      = 2
+            wind_speed_force_limit = v_w
+            f_nF = f_out
+
+    # Constrained tether force
+    if wind_speed_regime == 2:
+
+        mu_F = v_w / wind_speed_force_limit
+
+        starting_point = (-0.001)
+        bounds         = ((f_min, -0.001),)
+
+        optimisation_result = op.minimize(objective_function_2, \
+                                          starting_point,       \
+                                          args=(mu_F, f_nF),    \
+                                          bounds=bounds,        \
+                                          method='SLSQP')
+
+        # Reeling factors
+        f_in = optimisation_result['x'][0]
+
+        # Normalized cycle power
+        p_c = -objective_function_2 ([f_in], mu_F, f_nF)
+
+    # Constrained tether force and generator power
+
+    print(v_w, f_out, f_in, Ft_out, p_c)
+
+    mechanical_power.append(p_c * force_factor_out * kite_planform_area * Pw)
+    mechanical_power_ideal.append(power_factor_ideal * kite_planform_area * Pw)
+
+mechanical_power_min = np.min(mechanical_power_ideal)
+mechanical_power_max = np.max(mechanical_power_ideal)
 
 plt.figure()
 #plt.tight_layout()
 plt.xlabel(r"Wind speed [m/s]")
-plt.ylabel(r"Mechanical power [W]")
+plt.ylabel(r"Mechanical power [kW]")
 plt.title('Power curve')
-plt.xlim([wind_speed_min, wind_speed_max])
-plt.ylim([mechanical_power_min, mechanical_power_max])
-plt.plot(wind_speed, mechanical_power, 'r', linestyle=':', label=r"$f_{\mathrm{opt}}$")
+plt.xlim([0, 40])
+plt.ylim([0, 40])
+plt.vlines(wind_speed_force_limit, 0, 40, colors='k', linestyles='solid')
+plt.plot(wind_speed, np.asarray(mechanical_power_ideal)/1000, 'r', linestyle=':', label=r"$f_{\mathrm{opt}}$")
+plt.plot(wind_speed, np.asarray(mechanical_power)/1000, 'b', linestyle='-', label=r"$f_{\mathrm{opt}}$")
 plt.savefig("powercurve.svg")
