@@ -25,7 +25,7 @@ mpl.rcParams['pdf.fonttype'] = 42 # Output Type 3 (Type3) or Type 42 (TrueType)
 atmosphere_density        =  0.01    # kg/**3
 wind_speed_min            =  0.      # m/s
 wind_speed_max            =  50.     # m/s
-wind_speed_delta          =  1.      # m/s     ! accuracy of wind speed regimes
+wind_speed_delta          =  0.5     # m/s     ! accuracy of wind speed regimes
 
 # Kite properties
 kite_planform_area       =  200.    # m**2
@@ -179,19 +179,23 @@ for v_w in wind_speed:
     # Constrained tether force and generator power
     if wind_speed_regime == 3:
 
-        mu_P = v_w / wind_speed_power_limit
+        mu_P  = v_w / wind_speed_power_limit
+        f_out = f_nP / mu_P
+
+        # Reduce force factor to meet tether force limit
+        force_factor_out = nominal_tether_force / (q * kite_planform_area \
+                           * (cosine_beta_out - f_out)**2)
 
         starting_point = (-0.001)
         bounds         = ((f_min, -0.001),)
 
         optimisation_result = op.minimize(objective_function_3, \
                                           starting_point,       \
-                                          args=(mu_F, f_nF),    \
+                                          args=(mu_P, f_nP),    \
                                           bounds=bounds,        \
                                           method='SLSQP')
 
         # Reeling factors
-        f_out = f_nP / mu_P
         f_in  = optimisation_result['x'][0]
 
         # Normalized cycle power
@@ -206,7 +210,9 @@ for v_w in wind_speed:
           "{:5.3f}".format(f_out),  \
           "{:5.3f}".format(f_in),   \
           "{:5.0f}".format(Ft_out), \
-          "{:6.0f}".format(P_out))
+          "{:6.0f}".format(P_out),  \
+          "{:4.1f}".format(v_w * f_out), \
+          "{:5.2f}".format(force_factor_out))
 
 #    print("K_a    =", "{:5.3f}".format(viking_1["speedofsound"]/ref),"   ", \
 #                      "{:5.3f}".format(arsia_north["speedofsound"]/ref))
