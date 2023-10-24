@@ -12,6 +12,7 @@ wind_speed_delta parameter.
 """
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import math
 from scipy import optimize as op
 from pylab import np
 mpl.rcParams['font.family'] = "Open Sans"
@@ -25,7 +26,7 @@ mpl.rcParams['pdf.fonttype'] = 42 # Output Type 3 (Type3) or Type 42 (TrueType)
 atmosphere_density        =  0.01    # kg/**3
 wind_speed_min            =  0.      # m/s
 wind_speed_max            =  50.     # m/s
-wind_speed_delta          =  0.5     # m/s     ! accuracy of wind speed regimes
+wind_speed_delta          =  0.1     # m/s     ! accuracy of wind speed regimes
 
 # Kite properties
 kite_planform_area       =  200.    # m**2
@@ -101,6 +102,7 @@ CLo = kite_lift_coefficient_out
 wind_speed_regime      = 1
 wind_speed_force_limit = 0
 wind_speed_power_limit = 0
+print("Wind speed regime 1")
 
 # Loop over wind speed range
 for v_w in wind_speed:
@@ -140,9 +142,9 @@ for v_w in wind_speed:
 
         if Ft_out > nominal_tether_force:
             wind_speed_regime      = 2
-            wind_speed_force_limit = v_w
-            f_nF = f_out
-            print()
+            wind_speed_force_limit = v_w   # too coarse
+            f_nF = f_out                   # too coarse
+            print("Wind speed regime 2")
 
     # Constrained tether force
     if wind_speed_regime == 2:
@@ -174,7 +176,7 @@ for v_w in wind_speed:
             wind_speed_regime      = 3
             wind_speed_power_limit = v_w
             f_nP = f_out
-            print()
+            print("Wind speed regime 3")
 
     # Constrained tether force and generator power
     if wind_speed_regime == 3:
@@ -182,9 +184,14 @@ for v_w in wind_speed:
         mu_P  = v_w / wind_speed_power_limit
         f_out = f_nP / mu_P
 
-        # Reduce force factor to meet tether force limit
+        # Reduce force factor to comply tether force limit
         force_factor_out = nominal_tether_force / (q * kite_planform_area \
                            * (cosine_beta_out - f_out)**2)
+
+        # Alternative strategy to depower: increasing the elevation angle
+#       cosine_beta_out = np.sqrt(nominal_tether_force / (q \
+#                         * kite_planform_area * force_factor_out)) + f_out
+
 
         starting_point = (-0.001)
         bounds         = ((f_min, -0.001),)
@@ -212,7 +219,9 @@ for v_w in wind_speed:
           "{:5.0f}".format(Ft_out), \
           "{:6.0f}".format(P_out),  \
           "{:4.1f}".format(v_w * f_out), \
-          "{:5.2f}".format(force_factor_out))
+          "{:5.2f}".format(force_factor_out), \
+          "{:4.1f}".format(np.degrees(math.acos(cosine_beta_out))))
+
 
 #    print("K_a    =", "{:5.3f}".format(viking_1["speedofsound"]/ref),"   ", \
 #                      "{:5.3f}".format(arsia_north["speedofsound"]/ref))
