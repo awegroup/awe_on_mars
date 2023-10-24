@@ -61,6 +61,8 @@ wind_speed_range = wind_speed_max - wind_speed_min
 num_wind_speeds  = int(wind_speed_range/wind_speed_delta + 1)
 wind_speed  = np.linspace(wind_speed_min, wind_speed_max, num_wind_speeds)
 cycle_power = []
+power_out   = []
+power_in    = []
 power_ideal = []
 
 # Objective function for the three wind speed domains
@@ -92,11 +94,6 @@ def objective_function_3(x, mu_P, f_nP):
 print("num_wind_speeds = ", num_wind_speeds)
 
 ###############################################################################
-
-# Constant properties
-rho = atmosphere_density
-S   = kite_planform_area
-CLo = kite_lift_coefficient_out
 
 # Initialize wind speed regimes
 wind_speed_regime      = 1
@@ -135,10 +132,16 @@ for v_w in wind_speed:
         # Normalized cycle power
         p_c = -objective_function_1 ([f_out, f_in])
 
-        # Tether force and mechanical power during reel out
+        # Tether force during reel out
         Ft_out = q * kite_planform_area * force_factor_out * \
                      (cosine_beta_out - f_out)**2
+        a        = 1 - 2*f_in*cosine_beta_in + f_in**2
+        gamma_in = kite_lift_coefficient_in * np.sqrt(a/(1 - cosine_beta_in**2))
+        Ft_in  = q * kite_planform_area * gamma_in * a
+
+        # Mechanical power during reel out => can be elevated from the loop?
         P_out  = Ft_out * v_w * f_out
+        P_in   = Ft_in  * v_w * f_in
 
         if Ft_out > nominal_tether_force:
             wind_speed_regime      = 2
@@ -170,7 +173,13 @@ for v_w in wind_speed:
         # Tether force and mechanical power during reel out
         Ft_out = q * kite_planform_area * force_factor_out * \
                      (cosine_beta_out - f_out)**2
+        a      = 1 - 2*f_in*cosine_beta_in + f_in**2
+        gamma_in = kite_lift_coefficient_in * np.sqrt(a/(1 - cosine_beta_in**2))
+        Ft_in  = q * kite_planform_area * gamma_in * a
+
+        # Mechanical power during reel out => can be elevated from the loop?
         P_out  = Ft_out * v_w * f_out
+        P_in   = Ft_in  * v_w * f_in
 
         if P_out > nominal_generator_power:
             wind_speed_regime      = 3
@@ -208,10 +217,16 @@ for v_w in wind_speed:
         # Normalized cycle power
         p_c = -objective_function_3 ([f_in], mu_P, f_nP)
 
-        # Tether force and mechanical power during reel out
+        # Tether force during reel out
         Ft_out = q * kite_planform_area * force_factor_out * \
                      (cosine_beta_out - f_out)**2
+        a      = 1 - 2*f_in*cosine_beta_in + f_in**2
+        gamma_in = kite_lift_coefficient_in * np.sqrt(a/(1 - cosine_beta_in**2))
+        Ft_in  = q * kite_planform_area * gamma_in * a
+
+        # Mechanical power during reel out => can be elevated from the loop?
         P_out  = Ft_out * v_w * f_out
+        P_in   = Ft_in  * v_w * f_in
 
     print("{:4.1f}".format(v_w),    \
           "{:5.3f}".format(f_out),  \
@@ -227,6 +242,8 @@ for v_w in wind_speed:
 #                      "{:5.3f}".format(arsia_north["speedofsound"]/ref))
 
     cycle_power.append(p_c * force_factor_out * kite_planform_area * Pw)
+    power_out.append(P_out)
+    power_in.append(P_in)
     power_ideal.append(power_factor_ideal * kite_planform_area * Pw)
 
 power_min = np.min(power_ideal)
@@ -237,10 +254,12 @@ plt.figure()
 plt.xlabel(r"Wind speed [m/s]")
 plt.ylabel(r"Mechanical power [kW]")
 plt.title('Power curve')
-plt.xlim([0, 40])
-plt.ylim([0, 40])
-plt.vlines(wind_speed_force_limit, 0, 40, colors='k', linestyles='solid')
-plt.vlines(wind_speed_power_limit, 0, 40, colors='r', linestyles='solid')
+plt.xlim([0, 50])
+plt.ylim([0, 100])
+plt.vlines(wind_speed_force_limit, 0, 100, colors='k', linestyles='solid')
+plt.vlines(wind_speed_power_limit, 0, 100, colors='r', linestyles='solid')
 plt.plot(wind_speed, np.asarray(power_ideal)/1000, 'r', linestyle=':', label=r"$f_{\mathrm{opt}}$")
 plt.plot(wind_speed, np.asarray(cycle_power)/1000, 'b', linestyle='-', label=r"$f_{\mathrm{opt}}$")
+plt.plot(wind_speed, np.asarray(power_out)/1000, 'g', linestyle='--', label=r"$f_{\mathrm{opt}}$")
+plt.plot(wind_speed, -np.asarray(power_in)/1000, 'g', linestyle='--', label=r"$f_{\mathrm{opt}}$")
 plt.savefig("powercurve.svg")
