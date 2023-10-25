@@ -25,15 +25,15 @@ mpl.rcParams['pdf.fonttype'] = 42 # Output Type 3 (Type3) or Type 42 (TrueType)
 # Environmental properties
 atmosphere_density        =  0.01    # kg/**3
 wind_speed_min            =  0.      # m/s
-wind_speed_max            =  50.     # m/s
+wind_speed_max            =  40.     # m/s
 wind_speed_delta          =  0.1     # m/s     ! accuracy of wind speed regimes
 
 # Kite properties
 kite_planform_area       =  200.    # m**2
 kite_lift_coefficient_out =  0.71    # -
 kite_drag_coefficient_out =  0.14    # -
-kite_lift_coefficient_in  =  0.71    # -
-kite_drag_coefficient_in  =  0.07    # -
+kite_lift_coefficient_in  =  0.39    # -
+kite_drag_coefficient_in  =  0.39    # -
 
 # Tether properties
 nominal_tether_force      =  5100.   # N
@@ -45,7 +45,7 @@ nominal_generator_power   =  77000.  # W
 
 # Operational parameters
 elevation_angle_out       =  25.     # deg
-elevation_angle_in        =  60.     # deg
+elevation_angle_in        =  65.     # deg
 reeling_speed_min_limit   = -21.     # m/s
 reeling_speed_max_limit   =   8.     # m/s
 
@@ -139,10 +139,6 @@ for v_w in wind_speed:
         gamma_in = kite_lift_coefficient_in * np.sqrt(a/(1 - cosine_beta_in**2))
         Ft_in  = q * kite_planform_area * gamma_in * a
 
-        # Mechanical power during reel out => can be elevated from the loop?
-        P_out  = Ft_out * v_w * f_out
-        P_in   = Ft_in  * v_w * f_in
-
         if Ft_out > nominal_tether_force:
             wind_speed_regime      = 2
             wind_speed_force_limit = v_w   # too coarse
@@ -177,9 +173,8 @@ for v_w in wind_speed:
         gamma_in = kite_lift_coefficient_in * np.sqrt(a/(1 - cosine_beta_in**2))
         Ft_in  = q * kite_planform_area * gamma_in * a
 
-        # Mechanical power during reel out => can be elevated from the loop?
+        # Mechanical power during reel out
         P_out  = Ft_out * v_w * f_out
-        P_in   = Ft_in  * v_w * f_in
 
         if P_out > nominal_generator_power:
             wind_speed_regime      = 3
@@ -224,9 +219,12 @@ for v_w in wind_speed:
         gamma_in = kite_lift_coefficient_in * np.sqrt(a/(1 - cosine_beta_in**2))
         Ft_in  = q * kite_planform_area * gamma_in * a
 
-        # Mechanical power during reel out => can be elevated from the loop?
-        P_out  = Ft_out * v_w * f_out
-        P_in   = Ft_in  * v_w * f_in
+    # Mechanical power during reel out => can be elevated from the loop?
+    P_out  = Ft_out * v_w * f_out
+    P_in   = Ft_in  * v_w * f_in
+
+    # Lift-to-drag ratio reel-in phase
+    E_in = np.sqrt(1 - cosine_beta_in**2) / (cosine_beta_in - f_in)
 
     print("{:4.1f}".format(v_w),    \
           "{:5.3f}".format(f_out),  \
@@ -235,6 +233,8 @@ for v_w in wind_speed:
           "{:6.0f}".format(P_out),  \
           "{:4.1f}".format(v_w * f_out), \
           "{:5.2f}".format(force_factor_out), \
+          "{:5.2f}".format(gamma_in / force_factor_out), \
+          "{:5.2f}".format(E_in), \
           "{:4.1f}".format(np.degrees(math.acos(cosine_beta_out))))
 
 
@@ -255,11 +255,11 @@ plt.xlabel(r"Wind speed [m/s]")
 plt.ylabel(r"Mechanical power [kW]")
 plt.title('Power curve')
 plt.xlim([0, 50])
-plt.ylim([0, 100])
+plt.ylim([0, 80])
 plt.vlines(wind_speed_force_limit, 0, 100, colors='k', linestyles='solid')
 plt.vlines(wind_speed_power_limit, 0, 100, colors='r', linestyles='solid')
 plt.plot(wind_speed, np.asarray(power_ideal)/1000, 'r', linestyle=':', label=r"$f_{\mathrm{opt}}$")
 plt.plot(wind_speed, np.asarray(cycle_power)/1000, 'b', linestyle='-', label=r"$f_{\mathrm{opt}}$")
 plt.plot(wind_speed, np.asarray(power_out)/1000, 'g', linestyle='--', label=r"$f_{\mathrm{opt}}$")
-plt.plot(wind_speed, -np.asarray(power_in)/1000, 'g', linestyle='--', label=r"$f_{\mathrm{opt}}$")
+plt.plot(wind_speed, -np.asarray(power_in)/1000, 'r', linestyle='--', label=r"$f_{\mathrm{opt}}$")
 plt.savefig("powercurve.svg")
