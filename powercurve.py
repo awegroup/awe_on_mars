@@ -5,9 +5,6 @@ Created on Mon Oct  9 22:37:27 2023
 
 Power curve computed following the three-regimes strategy.
 
-The accuracy of the wind speeds delimiting the three regimes is set by the
-wind_speed_delta parameter.
-
 @author: Roland Schmehl
 """
 import matplotlib as mpl
