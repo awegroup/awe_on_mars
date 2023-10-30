@@ -25,11 +25,11 @@ mpl.rcParams['pdf.fonttype'] = 42 # Output Type 3 (Type3) or Type 42 (TrueType)
 # Environmental properties
 atmosphere_density        =  0.01    # kg/**3
 wind_speed_min            =  0.      # m/s
-wind_speed_max            =  40.     # m/s
-wind_speed_delta          =  0.1     # m/s     ! accuracy of wind speed regimes
+wind_speed_max            =  50.     # m/s
+wind_speed_delta          =  1.      # m/s     ! accuracy of wind speed regimes
 
 # Kite properties
-kite_planform_area       =  200.    # m**2
+kite_planform_area       =  200.     # m**2
 kite_lift_coefficient_out =  0.71    # -
 kite_drag_coefficient_out =  0.14    # -
 kite_lift_coefficient_in  =  0.39    # -
@@ -60,10 +60,16 @@ power_factor_ideal = force_factor_out * cosine_beta_out**3 * 4/27
 wind_speed_range = wind_speed_max - wind_speed_min
 num_wind_speeds  = int(wind_speed_range/wind_speed_delta + 1)
 wind_speed  = np.linspace(wind_speed_min, wind_speed_max, num_wind_speeds)
-cycle_power = []
-power_out   = []
-power_in    = []
-power_ideal = []
+
+# Lists
+reeling_factor_out = []
+reeling_factor_in  = []
+tether_force_out   = []
+tether_force_in    = []
+power_out          = []
+power_in           = []
+cycle_power        = []
+power_ideal        = []
 
 # Objective function for the three wind speed domains
 def objective_function_1(x):
@@ -133,17 +139,41 @@ for v_w in wind_speed:
         p_c = -objective_function_1 ([f_out, f_in])
 
         # Tether force during reel out
-        Ft_out = q * kite_planform_area * force_factor_out * \
-                     (cosine_beta_out - f_out)**2
+        Ft_out = q * kite_planform_area * force_factor_out  \
+                   * (cosine_beta_out - f_out)**2
         a        = 1 - 2*f_in*cosine_beta_in + f_in**2
         gamma_in = kite_lift_coefficient_in * np.sqrt(a/(1 - cosine_beta_in**2))
         Ft_in  = q * kite_planform_area * gamma_in * a
 
         if Ft_out > nominal_tether_force:
-            wind_speed_regime      = 2
-            wind_speed_force_limit = v_w   # too coarse
-            f_nF = f_out                   # too coarse
-            print("Wind speed regime 2")
+            wind_speed_regime = 2
+
+            # Determine precise value of v_w,F by interval bisection
+            v_b  = v_w
+            v_a  = v_w - wind_speed_delta
+            c    = 0.5 * atmosphere_density * kite_planform_area \
+                       * force_factor_out * (cosine_beta_out - f_out)**2
+            nmax = 100
+            eps  = 0.1
+            for i in range(nmax):
+                v  = (v_a + v_b)/2
+                Ft = c * v**2
+                if Ft > nominal_tether_force:
+                    v_b = v
+                else:
+                    v_a = v
+                if abs(Ft-nominal_tether_force) < eps:
+                    break
+            else:
+                print("!!! search v_w,F stopped after nmax=", nmax, "iterations")
+                print("--> increase nmax and rerun")
+
+            wind_speed_force_limit = v
+            f_nF  = f_out # works because f_out is constant in regime 1
+
+            print()
+            print("Wind speed regime 2 with v_n,F at", "{:5.2f}".format(wind_speed_force_limit))
+            print()
 
     # Constrained tether force
     if wind_speed_regime == 2:
@@ -177,10 +207,36 @@ for v_w in wind_speed:
         P_out  = Ft_out * v_w * f_out
 
         if P_out > nominal_generator_power:
-            wind_speed_regime      = 3
-            wind_speed_power_limit = v_w
-            f_nP = f_out
-            print("Wind speed regime 3")
+            wind_speed_regime = 3
+
+            # Determine precise value of v_w,P by interval bisection
+            v_b  = v_w
+            v_a  = v_w - wind_speed_delta
+            c    = 0.5 * atmosphere_density * kite_planform_area \
+                       * force_factor_out
+            nmax = 100
+            eps  = 1
+            for i in range(nmax):
+                v  = (v_a + v_b)/2
+                mu = v / wind_speed_force_limit
+                f  = (cosine_beta_out * (mu - 1) + f_nF)/mu
+                P  = c * (cosine_beta_out - f)**2 * v**3 * f
+                if P > nominal_generator_power:
+                    v_b = v
+                else:
+                    v_a = v
+                if abs(P-nominal_generator_power) < eps:
+                    break
+            else:
+                print("!!! search v_w,P stopped after nmax=", nmax, "iterations")
+                print("--> increase nmax and rerun")
+
+            wind_speed_power_limit = v
+            f_nP = f
+
+            print()
+            print("Wind speed regime 3 with v_n,P at", "{:5.2f}".format(wind_speed_power_limit))
+            print()
 
     # Constrained tether force and generator power
     if wind_speed_regime == 3:
@@ -188,7 +244,7 @@ for v_w in wind_speed:
         mu_P  = v_w / wind_speed_power_limit
         f_out = f_nP / mu_P
 
-        # Reduce force factor to comply tether force limit
+        # Reduce force factor to comply with tether force limit
         force_factor_out = nominal_tether_force / (q * kite_planform_area \
                            * (cosine_beta_out - f_out)**2)
 
@@ -233,17 +289,17 @@ for v_w in wind_speed:
           "{:6.0f}".format(P_out),  \
           "{:4.1f}".format(v_w * f_out), \
           "{:5.2f}".format(force_factor_out), \
-          "{:5.2f}".format(gamma_in / force_factor_out), \
+          "{:5.2f}".format(gamma_in), \
           "{:5.2f}".format(E_in), \
           "{:4.1f}".format(np.degrees(math.acos(cosine_beta_out))))
 
-
-#    print("K_a    =", "{:5.3f}".format(viking_1["speedofsound"]/ref),"   ", \
-#                      "{:5.3f}".format(arsia_north["speedofsound"]/ref))
-
-    cycle_power.append(p_c * force_factor_out * kite_planform_area * Pw)
+    reeling_factor_out.append(f_out)
+    reeling_factor_in.append(f_in)
+    tether_force_out.append(Ft_out)
+    tether_force_in.append(Ft_in)
     power_out.append(P_out)
     power_in.append(P_in)
+    cycle_power.append(p_c * force_factor_out * kite_planform_area * Pw)
     power_ideal.append(power_factor_ideal * kite_planform_area * Pw)
 
 power_min = np.min(power_ideal)
