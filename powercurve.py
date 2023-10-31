@@ -21,7 +21,7 @@ mpl.rcParams['pdf.fonttype'] = 42 # Output Type 3 (Type3) or Type 42 (TrueType)
 
 # Environmental properties
 atmosphere_density        =  0.01    # kg/**3
-wind_speed_min            =  0.      # m/s
+wind_speed_min            =  1.      # m/s
 wind_speed_max            =  50.     # m/s
 wind_speed_delta          =  1.      # m/s     ! accuracy of wind speed regimes
 
@@ -67,6 +67,7 @@ power_out          = []
 power_in           = []
 cycle_power        = []
 power_ideal        = []
+beta_in = []
 
 # Objective function for the three wind speed domains
 def objective_function_1(x):
@@ -298,21 +299,37 @@ for v_w in wind_speed:
     power_in.append(P_in)
     cycle_power.append(p_c * force_factor_out * kite_planform_area * Pw)
     power_ideal.append(power_factor_ideal * kite_planform_area * Pw)
+    beta_in.append(elevation_angle_in)
 
 power_min = np.min(power_ideal)
 power_max = np.max(power_ideal)
 
-plt.figure()
-#plt.tight_layout()
-plt.xlabel(r"Wind speed [m/s]")
-plt.ylabel(r"Mechanical power [kW]")
-plt.title('Power curve')
-plt.xlim([0, 50])
-plt.ylim([0, 80])
-plt.vlines(wind_speed_force_limit, 0, 100, colors='k', linestyles='solid')
-plt.vlines(wind_speed_power_limit, 0, 100, colors='r', linestyles='solid')
-plt.plot(wind_speed, np.asarray(power_ideal)/1000, 'r', linestyle=':', label=r"$f_{\mathrm{opt}}$")
-plt.plot(wind_speed, np.asarray(cycle_power)/1000, 'b', linestyle='-', label=r"$f_{\mathrm{opt}}$")
-plt.plot(wind_speed, np.asarray(power_out)/1000, 'g', linestyle='--', label=r"$f_{\mathrm{opt}}$")
-plt.plot(wind_speed, -np.asarray(power_in)/1000, 'r', linestyle='--', label=r"$f_{\mathrm{opt}}$")
-plt.savefig("powercurve.svg")
+fig, ax1 = plt.subplots()
+ax1.set(xlabel=r"Wind speed, m/s", ylabel=r"Mechanical power, kW")
+ax1.set_xlim([0, 50])
+ax1.set_ylim([0, 80])
+ax1.vlines(wind_speed_force_limit, 0, 100, colors='k', linestyles='solid')
+ax1.vlines(wind_speed_power_limit, 0, 100, colors='r', linestyles='solid')
+ax1.plot(wind_speed,  np.asarray(power_ideal)/1000, 'r', linestyle=':', label=r"$\zeta_{\mathrm{opt}}$")
+ax1.plot(wind_speed,  np.asarray(cycle_power)/1000, 'b', linestyle='-', label=r"$P_{\mathrm{c}}$")
+ax1.plot(wind_speed,  np.asarray(power_out)/1000, 'g', linestyle='--', label=r"$P_{\mathrm{o}}$")
+ax1.plot(wind_speed, -np.asarray(power_in)/1000, 'r', linestyle='--', label=r"$-P_{\mathrm{i}}$")
+ax1.legend(frameon=False)
+#fig.tight_layout()
+fig.savefig("powercurve.svg")
+
+fig, ax1 = plt.subplots()
+ax1.set(xlabel=r"Wind speed, m/s", ylabel=r"Reeling factor")
+ax1.set_xlim([0, 50])
+ax1.set_ylim([0, 1])
+ax1.vlines(wind_speed_force_limit, 0, 100, colors='k', linestyles='solid')
+ax1.vlines(wind_speed_power_limit, 0, 100, colors='r', linestyles='solid')
+ax1.plot(wind_speed,  np.asarray(reeling_factor_out), 'g', linestyle='--', label=r"$f_{\mathrm{o}}$")
+ax1.plot(wind_speed, -np.asarray(reeling_factor_in), 'r', linestyle='--', label=r"$-f_{\mathrm{i}}$")
+ax2 = ax1.twinx()
+ax2.set_ylim([0, 90])
+ax2.plot(wind_speed,  np.asarray(beta_in), 'b', linestyle='-', label=r"$\beta_{\mathrm{i}}$")
+#ax1.legend(frameon=False)
+fig.legend(frameon=False, loc="upper right", bbox_to_anchor=(1,1), bbox_transform=ax1.transAxes)
+#fig.tight_layout()
+fig.savefig("operations.svg")
