@@ -21,8 +21,8 @@ mpl.rcParams['pdf.fonttype'] = 42 # Output Type 3 (Type3) or Type 42 (TrueType)
 # Environmental properties
 atmosphere_density        =  0.01    # kg/**3
 wind_speed_min            =  1.      # m/s
-wind_speed_max            =  50.     # m/s
-wind_speed_delta          =  1.      # m/s     ! accuracy of wind speed regimes
+wind_speed_max            =  40.     # m/s
+wind_speed_delta          =  0.1     # m/s     ! accuracy of wind speed regimes
 
 # Kite properties
 kite_planform_area       =  200.     # m**2
@@ -111,7 +111,7 @@ for v_w in wind_speed:
     q  = 0.5 * atmosphere_density * v_w**2
 
     # Wind power density
-    Pw = q*v_w
+    P_w = q*v_w
 
     # Reeling factor limits
     f_max = reeling_speed_max_limit / v_w
@@ -240,8 +240,8 @@ for v_w in wind_speed:
                            * (cosine_beta_out - f_out)**2)
 
         # Alternative strategy to depower: increasing the elevation angle
-#       cosine_beta_out = np.sqrt(nominal_tether_force / (q \
-#                         * kite_planform_area * force_factor_out)) + f_out
+#        cosine_beta_out = np.sqrt(nominal_tether_force / (q \
+#                          * kite_planform_area * force_factor_out)) + f_out
 
 
         starting_point = (-0.001)
@@ -291,8 +291,8 @@ for v_w in wind_speed:
     tether_force_in.append(Ft_in)
     power_out.append(P_out)
     power_in.append(P_in)
-    cycle_power.append(p_c * force_factor_out * kite_planform_area * Pw)
-    power_ideal.append(power_factor_ideal * kite_planform_area * Pw)
+    cycle_power.append(p_c * force_factor_out * kite_planform_area * P_w)
+    power_ideal.append(power_factor_ideal * kite_planform_area * P_w)
     elevation_angle_in.append(np.degrees(beta_in))
 
 power_min = np.min(power_ideal)
@@ -304,7 +304,7 @@ ax1.set_xlim([0, 50])
 ax1.set_ylim([0, 80])
 ax1.vlines(wind_speed_force_limit, 0, 100, colors='k', linestyles='solid')
 ax1.vlines(wind_speed_power_limit, 0, 100, colors='r', linestyles='solid')
-ax1.plot(wind_speed,  np.asarray(power_ideal)/1000, 'r', linestyle=':', label=r"$\zeta_{\mathrm{opt}}$")
+ax1.plot(wind_speed,  np.asarray(power_ideal)/1000, 'r', linestyle=':', label=r"$P_{\mathrm{opt}}$")
 ax1.plot(wind_speed,  np.asarray(cycle_power)/1000, 'b', linestyle='-', label=r"$P_{\mathrm{c}}$")
 ax1.plot(wind_speed,  np.asarray(power_out)/1000, 'g', linestyle='--', label=r"$P_{\mathrm{o}}$")
 ax1.plot(wind_speed, -np.asarray(power_in)/1000, 'r', linestyle='--', label=r"$-P_{\mathrm{i}}$")
