@@ -5,8 +5,8 @@ Created on Mon Oct  9 22:37:27 2023
 
 Power curve computed following the three-regimes strategy.
 
-In this implementation, a constant lift-to-drag ratio E is prescribed during
-reel-in, which means that the elevation angle during reel-in is computed as a
+In this implementation, a constant elevation angle beta is prescribed during
+reel-in, which means that the lift-to-drag ratio during reel-in is computed as a
 dependent variable.
 
 @author: Roland Schmehl
@@ -33,7 +33,6 @@ kite_planform_area       =  200.     # m**2
 kite_lift_coefficient_out =  0.71    # -
 kite_drag_coefficient_out =  0.14    # -
 kite_lift_coefficient_in  =  0.39    # -
-kite_drag_coefficient_in  =  0.39    # -
 
 # Tether properties
 nominal_tether_force      =  5100.   # N
@@ -45,15 +44,15 @@ nominal_generator_power   =  77000.  # W
 
 # Operational parameters
 elevation_angle_out       =  25.     # deg
+elevation_angle_in        =  65.     # deg
 reeling_speed_min_limit   = -21.     # m/s
 reeling_speed_max_limit   =   8.     # m/s
 
 # Derived properties
-E2out = (kite_lift_coefficient_out / kite_drag_coefficient_out)**2
-E2in  = (kite_lift_coefficient_in  / kite_drag_coefficient_in)**2
+E2 = (kite_lift_coefficient_out / kite_drag_coefficient_out)**2
 cosine_beta_out  = np.cos(np.radians(elevation_angle_out))
-force_factor_out = kite_lift_coefficient_out * np.sqrt(1+1/E2out) * (1+E2out)
-force_factor_in  = kite_lift_coefficient_in  * np.sqrt(1+1/E2in)
+cosine_beta_in   = np.cos(np.radians(elevation_angle_in))
+force_factor_out = kite_lift_coefficient_out * np.sqrt(1+1/E2) * (1+E2)
 power_factor_ideal = force_factor_out * cosine_beta_out**3 * 4/27
 
 wind_speed_range = wind_speed_max - wind_speed_min
@@ -69,32 +68,33 @@ power_out          = []
 power_in           = []
 cycle_power        = []
 power_ideal        = []
-elevation_angle_in = []
-
+lift_to_drag_in    = []
 
 # Objective function for the three wind speed domains
 def objective_function_1(x):
     f_out    = x[0]
     f_in     = x[1]
-    return -((cosine_beta_out - f_out)**2 \
-             - (force_factor_in / force_factor_out) \
-               * (np.sqrt(1 + E2in*(1 - f_in**2)) - f_in)**2/(1 + E2in)) \
-            * (f_in*f_out) / (f_in - f_out)
+    a        = 1 - 2*f_in*cosine_beta_in + f_in**2
+    gamma_in = kite_lift_coefficient_in * np.sqrt(a/(1 - cosine_beta_in**2))
+    return -((cosine_beta_out - f_out)**2 - (gamma_in / force_factor_out) * \
+                a) * (f_in*f_out) / (f_in - f_out)
 
 def objective_function_2(x, mu_F, f_nF):
     f_in     = x[0]
+    a        = 1 - 2*f_in*cosine_beta_in + f_in**2
     b        = (mu_F - 1) * cosine_beta_out + f_nF
+    gamma_in = kite_lift_coefficient_in * np.sqrt(a/(1 - cosine_beta_in**2))
     return -(((cosine_beta_out - f_nF) / mu_F)**2  \
-             - (force_factor_in / force_factor_out) \
-               * (np.sqrt(1 + E2in*(1 - f_in**2)) - f_in)**2/(1 + E2in))  \
-            * f_in*b/(mu_F*f_in-b)
+             - (gamma_in / force_factor_out) * a)  \
+             * f_in*b/(mu_F*f_in-b)
 
 def objective_function_3(x, mu_P, f_nP):
     f_in     = x[0]
+    a        = 1 - 2*f_in*cosine_beta_in + f_in**2
+    gamma_in = kite_lift_coefficient_in * np.sqrt(a/(1 - cosine_beta_in**2))
     return -(((cosine_beta_out - f_nP) / mu_P)**2  \
-             - (force_factor_in / force_factor_out) \
-               * (np.sqrt(1 + E2in*(1 - f_in**2)) - f_in)**2/(1 + E2in))  \
-            * f_in*f_nP/(mu_P*f_in-f_nP)
+             - (gamma_in / force_factor_out) * a)  \
+             * f_in*f_nP/(mu_P*f_in-f_nP)
 
 print("num_wind_speeds = ", num_wind_speeds)
 
@@ -140,6 +140,9 @@ for v_w in wind_speed:
         # Tether force during reel-out
         Ft_out = q * kite_planform_area * force_factor_out  \
                    * (cosine_beta_out - f_out)**2
+        a        = 1 - 2*f_in*cosine_beta_in + f_in**2
+        gamma_in = kite_lift_coefficient_in * np.sqrt(a/(1 - cosine_beta_in**2))
+        Ft_in  = q * kite_planform_area * gamma_in * a
 
         if Ft_out > nominal_tether_force:
             wind_speed_regime = 2
@@ -195,6 +198,9 @@ for v_w in wind_speed:
         # Tether force and mechanical power during reel out
         Ft_out = q * kite_planform_area * force_factor_out * \
                      (cosine_beta_out - f_out)**2
+        a      = 1 - 2*f_in*cosine_beta_in + f_in**2
+        gamma_in = kite_lift_coefficient_in * np.sqrt(a/(1 - cosine_beta_in**2))
+        Ft_in  = q * kite_planform_area * gamma_in * a
 
         # Mechanical power during reel out
         P_out  = Ft_out * v_w * f_out
@@ -261,19 +267,19 @@ for v_w in wind_speed:
         # Normalized cycle power
         p_c = -objective_function_3 ([f_in], mu_P, f_nP)
 
-    # Tether force
-    Ft_out = q * kite_planform_area * force_factor_out  \
-               * (cosine_beta_out - f_out)**2
-    Ft_in  = q * kite_planform_area * force_factor_in  \
-               * (np.sqrt(1 + E2in*(1 - f_in**2)) - f_in)**2/(1 + E2in)
+        # Tether force
+        Ft_out = q * kite_planform_area * force_factor_out * \
+                     (cosine_beta_out - f_out)**2
+        a      = 1 - 2*f_in*cosine_beta_in + f_in**2
+        gamma_in = kite_lift_coefficient_in * np.sqrt(a/(1 - cosine_beta_in**2))
+        Ft_in  = q * kite_planform_area * gamma_in * a
 
-    # Mechanical power
+    # Mechanical power during reel out => can be elevated from the loop?
     P_out  = Ft_out * v_w * f_out
     P_in   = Ft_in  * v_w * f_in
 
-    # Elevation angle reel-in-phase
-    beta_in = np.arccos((np.sqrt(1 + E2in*(1 - f_in**2)) \
-                                   + f_in*E2in)/(1 + E2in))
+    # Lift-to-drag ratio reel-in phase
+    E_in = np.sqrt(1 - cosine_beta_in**2) / (cosine_beta_in - f_in)
 
     print("{:4.1f}".format(v_w),    \
           "{:5.3f}".format(f_out),  \
@@ -284,8 +290,8 @@ for v_w in wind_speed:
           "{:6.0f}".format(P_in),   \
           "{:4.1f}".format(v_w * f_out), \
           "{:5.2f}".format(force_factor_out), \
-          "{:5.2f}".format(force_factor_in), \
-          "{:4.1f}".format(np.degrees(beta_in)))
+          "{:5.2f}".format(gamma_in), \
+          "{:5.2f}".format(E_in))
 
     reeling_factor_out.append(f_out)
     reeling_factor_in.append(f_in)
@@ -295,7 +301,7 @@ for v_w in wind_speed:
     power_in.append(P_in)
     cycle_power.append(p_c * force_factor_out * kite_planform_area * P_w)
     power_ideal.append(power_factor_ideal * kite_planform_area * P_w)
-    elevation_angle_in.append(np.degrees(beta_in))
+    lift_to_drag_in.append(E_in)
 
 power_min = np.min(power_ideal)
 power_max = np.max(power_ideal)
@@ -311,22 +317,20 @@ ax1.plot(wind_speed,  np.asarray(cycle_power)/1000, 'b', linestyle='-', label=r"
 ax1.plot(wind_speed,  np.asarray(power_out)/1000, 'g', linestyle='--', label=r"$P_{\mathrm{o}}$")
 ax1.plot(wind_speed, -np.asarray(power_in)/1000, 'r', linestyle='--', label=r"$-P_{\mathrm{i}}$")
 ax1.legend(frameon=False)
-#fig.tight_layout()
-fig.savefig("powercurve.svg")
+fig.savefig("powercurve_const_beta_in.svg")
 
 fig, ax1 = plt.subplots()
 ax1.set(xlabel=r"Wind speed, m/s", ylabel=r"Reeling factor")
 ax1.set_xlim([0, 50])
-ax1.set_ylim([0, 1.5])
+ax1.set_ylim([0, 1])
 ax1.vlines(wind_speed_force_limit, 0, 100, colors='k', linestyles='solid')
 ax1.vlines(wind_speed_power_limit, 0, 100, colors='r', linestyles='solid')
 ax1.plot(wind_speed,  np.asarray(reeling_factor_out), 'g', linestyle='--', label=r"$f_{\mathrm{o}}$")
 ax1.plot(wind_speed, -np.asarray(reeling_factor_in), 'r', linestyle='--', label=r"$-f_{\mathrm{i}}$")
 ax2 = ax1.twinx()
-ax2.set(ylabel=r"Elevation angle, $^\circ$")
-ax2.set_ylim([0, 140])
-ax2.plot(wind_speed,  np.asarray(elevation_angle_in), 'b', linestyle='-', label=r"$\beta_{\mathrm{i}}$")
+ax2.set(ylabel=r"Lift to drag ratio")
+ax2.set_ylim([0, 1.2])
+ax2.plot(wind_speed,  np.asarray(lift_to_drag_in), 'b', linestyle='-', label=r"$E_{\mathrm{i}}$")
 #ax1.legend(frameon=False)
 fig.legend(frameon=False, loc="upper right", bbox_to_anchor=(1,1), bbox_transform=ax1.transAxes)
-#fig.tight_layout()
-fig.savefig("operations.svg")
+fig.savefig("operations_const_beta_in.svg")
