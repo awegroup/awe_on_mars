@@ -289,6 +289,7 @@ for v_w in wind_speed:
           "{:6.0f}".format(P_out),  \
           "{:6.0f}".format(P_in),   \
           "{:4.1f}".format(v_w * f_out), \
+          "{:4.1f}".format(v_w * f_in), \
           "{:5.2f}".format(force_factor_out), \
           "{:5.2f}".format(gamma_in), \
           "{:5.2f}".format(E_in))
