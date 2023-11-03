@@ -25,7 +25,7 @@ mpl.rcParams['pdf.fonttype'] = 42 # Output Type 3 (Type3) or Type 42 (TrueType)
 # Environmental properties
 atmosphere_density        =  0.01    # kg/**3
 wind_speed_min            =  1.      # m/s
-wind_speed_max            =  40.     # m/s
+wind_speed_max            =  45.     # m/s
 wind_speed_delta          =  0.1     # m/s
 
 # Kite properties
@@ -39,18 +39,23 @@ kite_drag_coefficient_in  =  0.39    # -
 nominal_tether_force      =  5100.   # N
 tether_drag_coefficient   =  1.1     # -
 tether_diameter           =  0.00484 # m
+tether_length_max         =  385.    # m
+tether_length_min         =  240.    # m
 
 # Generator properties
 nominal_generator_power   =  77000.  # W
 
 # Operational parameters
 elevation_angle_out       =  25.     # deg
-reeling_speed_min_limit   = -29.     # m/s
+reeling_speed_min_limit   = -21.     # m/s
 reeling_speed_max_limit   =   8.     # m/s
 
 # Derived properties
-E2out = (kite_lift_coefficient_out / kite_drag_coefficient_out)**2
-E2in  = (kite_lift_coefficient_in  / kite_drag_coefficient_in)**2
+rm_out = 0.5 * (tether_length_min + tether_length_max)
+CD_out = kite_drag_coefficient_out + 0.25 * tether_drag_coefficient \
+         * tether_diameter * rm_out / kite_planform_area
+E2out  = (kite_lift_coefficient_out / CD_out)**2
+E2in   = (kite_lift_coefficient_in  / kite_drag_coefficient_in)**2
 cosine_beta_out  = np.cos(np.radians(elevation_angle_out))
 force_factor_out = kite_lift_coefficient_out * np.sqrt(1+1/E2out) * (1+E2out)
 force_factor_in  = kite_lift_coefficient_in  * np.sqrt(1+1/E2in)
@@ -128,7 +133,7 @@ for v_w in wind_speed:
         optimisation_result = op.minimize(objective_function_1, \
                                           starting_point,       \
                                           bounds=bounds,        \
-                                          method='SLSQP')
+                                          method='COBYLA')
 
         # Reeling factors
         f_out = optimisation_result['x'][0]
@@ -183,7 +188,7 @@ for v_w in wind_speed:
                                           starting_point,       \
                                           args=(mu_F, f_nF),    \
                                           bounds=bounds,        \
-                                          method='SLSQP')
+                                          method='COBYLA')
 
         # Reeling factors
         f_out = (cosine_beta_out * (mu_F - 1) + f_nF)/mu_F
@@ -253,7 +258,7 @@ for v_w in wind_speed:
                                           starting_point,       \
                                           args=(mu_P, f_nP),    \
                                           bounds=bounds,        \
-                                          method='SLSQP')
+                                          method='COBYLA')
 
         # Reeling factors
         f_in  = optimisation_result['x'][0]
@@ -298,6 +303,11 @@ for v_w in wind_speed:
     power_ideal.append(power_factor_ideal * kite_planform_area * P_w)
     elevation_angle_in.append(np.degrees(beta_in))
 
+print()
+cp = np.array(cycle_power)
+print("> Rated power: ", "{:6.0f}".format(max(cp)), "W at ", \
+      "{:4.1f}".format(wind_speed[cp.argmax()]), "m/s")
+
 power_min = np.min(power_ideal)
 power_max = np.max(power_ideal)
 
@@ -305,13 +315,15 @@ fig, ax1 = plt.subplots()
 ax1.set(xlabel=r"Wind speed, m/s", ylabel=r"Mechanical power, kW")
 ax1.set_xlim([0, 50])
 ax1.set_ylim([0, 80])
-ax1.grid()
-ax1.vlines(wind_speed_force_limit, 0, 100, colors='k', linestyles='solid')
-ax1.vlines(wind_speed_power_limit, 0, 100, colors='r', linestyles='solid')
+#ax1.grid()
+ax1.vlines(wind_speed_force_limit, 0, 100, colors='k', linestyles=':')
+ax1.vlines(wind_speed_power_limit, 0, 100, colors='k', linestyles=':')
 ax1.annotate("1",(15,40), ha="center", va="center", bbox={"boxstyle" : "circle", "color":"white", "ec" : "k"})
 ax1.annotate("2",(30,40), ha="center", va="center", bbox={"boxstyle" : "circle", "color":"white", "ec" : "k"})
 ax1.annotate("3",(37,40), ha="center", va="center", bbox={"boxstyle" : "circle", "color":"white", "ec" : "k"})
-ax1.plot(wind_speed,  np.asarray(power_ideal)/1000, 'r', linestyle=':', label=r"$P_{\mathrm{opt}}$")
+ax1.annotate(r"$v_{\mathrm{n,F}}$",(24.5,-2.5), annotation_clip=False, ha="center", va="center")
+ax1.annotate(r"$v_{\mathrm{n,P}}$",(35.,-2.5), annotation_clip=False, ha="center", va="center")
+ax1.plot(wind_speed,  np.asarray(power_ideal)/1000, 'k', linestyle=':', label=r"$P_{\mathrm{opt}}$")
 ax1.plot(wind_speed,  np.asarray(cycle_power)/1000, 'b', linestyle='-', label=r"$P_{\mathrm{c}}$")
 ax1.plot(wind_speed,  np.asarray(power_out)/1000, 'g', linestyle='--', label=r"$P_{\mathrm{o}}$")
 ax1.plot(wind_speed, -np.asarray(power_in)/1000, 'r', linestyle='--', label=r"$-P_{\mathrm{i}}$")
@@ -322,13 +334,15 @@ fig, ax1 = plt.subplots()
 ax1.set(xlabel=r"Wind speed, m/s", ylabel=r"Reeling factor")
 ax1.set_xlim([0, 50])
 ax1.set_ylim([0, 1.5])
-ax1.grid()
-ax1.vlines(wind_speed_force_limit, 0, 100, colors='k', linestyles='solid')
-ax1.vlines(wind_speed_power_limit, 0, 100, colors='r', linestyles='solid')
+#ax1.grid()
+ax1.vlines(wind_speed_force_limit, 0, 100, colors='k', linestyles=':')
+ax1.vlines(wind_speed_power_limit, 0, 100, colors='k', linestyles=':')
+ax1.annotate(r"$v_{\mathrm{n,F}}$",(24.5,-0.045), annotation_clip=False, ha="center", va="center")
+ax1.annotate(r"$v_{\mathrm{n,P}}$",(35,-0.045), annotation_clip=False, ha="center", va="center")
 ax1.plot(wind_speed,  np.asarray(reeling_factor_out), 'g', linestyle='--', label=r"$f_{\mathrm{o}}$")
 ax1.plot(wind_speed, -np.asarray(reeling_factor_in), 'r', linestyle='--', label=r"$-f_{\mathrm{i}}$")
 ax2 = ax1.twinx()
-ax2.set(ylabel=r"Elevation angle, $^\circ$")
+ax2.set(ylabel=r"Elevation angle, deg")
 ax2.set_ylim([0, 140])
 ax2.plot(wind_speed,  np.asarray(elevation_angle_in), 'b', linestyle='-', label=r"$\beta_{\mathrm{i}}$")
 fig.legend(facecolor="white", edgecolor="white", loc="upper right", bbox_to_anchor=(1,1), bbox_transform=ax1.transAxes)
