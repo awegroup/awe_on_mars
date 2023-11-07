@@ -4,13 +4,13 @@ Data and code for investigating the feasibility of airborne wind energy on Mars 
 
 ## Scaling study [[1]](#References)
 
-The two files are an Excel sheet `mcd_data.ods` with the tabulated data of the Mars Climate Databe v6.1 for the Viking 1 and Arsia North sites, and the file `scaling.py` to compute the scaling factors from the simplified relations given in the chapter.
+The two files are an Excel sheet `mcd_data.ods` with the tabulated data of the Mars Climate Database v6.1 for the Viking 1 and Arsia North sites and the file `scaling.py` to compute the scaling factors from the simplified relations given in the chapter.
 
 ## Performance analysis [[2]](#References)
 
-The file `powercurve.py` generates a continuous power curve for a pumping airborne wind energy system in three wind speed regimes. The control strategy was first proposed in [[3]](#References) and was extended in the chapter to account for constant elevation angles during reel-out and reel-in phases. In contrast to [[3]](#References) the reel-in phase is modeled for constant lift-to-drag ratio of the kite, resulting in a reel-in elevation angle varying with the wind speed. This setup is more appropriate for soft-kite systems with slow actuation and a required safe distance from negative angle of attack.
+The file `powercurve.py` generates a continuous power curve for a pumping airborne wind energy system in three wind speed regimes. The control strategy was first proposed in [[3]](#References) and was extended in the chapter to account for constant elevation angles during the reel-out and reel-in phases. In contrast to [[3]](#References), the reel-in phase is modeled for constant lift-to-drag ratio of the kite, resulting in a reel-in elevation angle varying with the wind speed. This setup is more appropriate for soft-kite systems with slow actuation and a required safe distance from a negative angle of attack.
 
-The file `powercurve_const_beta_in.py` contains the alternative implementation, outlined in parts already in [[3]](#References), with a constant reel-in elevation angle, resulting in a lift-to-drag ratio that varies with the wind speed. This implementation might prove useful for fixed-wing kite systems with fast actuation and which can fly at negative and positive angle of attack.
+The file `powercurve_const_beta_in.py` contains the alternative implementation, outlined in parts already in [[3]](#References), with a constant reel-in elevation angle, resulting in a lift-to-drag ratio that varies with the wind speed. This implementation might prove helpful in fixed-wing kite systems with fast actuation that can fly at negative and positive angles of attack.
 
 ## References
 
