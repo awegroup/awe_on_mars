@@ -17,6 +17,13 @@ In contrast to [[3]](#References), the reel-in phase is modeled for constant lif
 
 The file `powercurve_const_beta_in.py` contains the alternative implementation, outlined in parts already in [[3]](#References), with a constant reel-in elevation angle, resulting in a lift-to-drag ratio that varies with the wind speed. This implementation might prove helpful in fixed-wing kite systems with fast actuation that can fly at negative and positive angles of attack.
 
+## Tools
+
+The following external tools were used for the analysis
+
+- Java Mission-planning and Analysis for Remote Sensing (JMARS). [https://jmars.mars.asu.edu](https://jmars.mars.asu.edu)
+- Mars Climate Database (MCD). [https://www-mars.lmd.jussieu.fr](https://www-mars.lmd.jussieu.fr)
+
 ## References
 
 [1] Gaunaa, M., Rodriguez, M., Ouroumova, L., Schmehl, R.: Scaling Airborne Wind Energy Systems for Deployment on Mars. In: Cervone, A., Bier, H., Makaya, A. (eds.) Adaptive Off-Earth Manufacturing. Springer Series in Adaptive Environments. Chapter 6. Springer Cham. 2023.
