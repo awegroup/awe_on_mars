@@ -23,4 +23,4 @@ The file `powercurve_const_beta_in.py` contains the alternative implementation, 
 
 [2] Schmehl, R., Rodriguez, M., Ouroumova, L., Gaunaa, M.: Airborne Wind Energy for Martian Habitats. In: Cervone, A., Bier, H., Makaya, A. (eds.)  Adaptive Off-Earth Manufacturing. Springer Series in Adaptive Environments. Chapter 7. Springer Cham. 2023.
 
-[3] Luchsinger, R.H.: Pumping Cycle Kite Power. In: Ahrens, U., Diehl, M., and Schmehl, R. (eds) Airborne Wind Energy. Green Energy and Technology. Springer, Berlin Heidelberg. Chap. 3, pp 47-64. doi:[10.1007/978-3-642-39965-7_3](https://doi.org/10.1007/978-3-642-39965-7_3).
+[3] Luchsinger, R.H.: Pumping Cycle Kite Power. In: Ahrens, U., Diehl, M., and Schmehl, R. (eds) Airborne Wind Energy. Green Energy and Technology. Springer, Berlin Heidelberg. Chap. 3, pp 47-64, 2013. doi:[10.1007/978-3-642-39965-7_3](https://doi.org/10.1007/978-3-642-39965-7_3).

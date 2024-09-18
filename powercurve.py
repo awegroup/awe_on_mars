@@ -96,7 +96,11 @@ def objective_function_2(x, mu_F, f_nF):
 
 def objective_function_3(x, mu_P, f_nP):
     f_in     = x[0]
-    return -(((cosine_beta_out - f_nP) / mu_P)**2  \
+#    return -(((cosine_beta_out - f_nP) / mu_P)**2  \
+#             - (force_factor_in / force_factor_out) \
+#               * (np.sqrt(1 + E2in*(1 - f_in**2)) - f_in)**2/(1 + E2in))  \
+#            * f_in*f_nP/(mu_P*f_in-f_nP)
+    return -((cosine_beta_out - f_nP/mu_P)**2  \
              - (force_factor_in / force_factor_out) \
                * (np.sqrt(1 + E2in*(1 - f_in**2)) - f_in)**2/(1 + E2in))  \
             * f_in*f_nP/(mu_P*f_in-f_nP)
